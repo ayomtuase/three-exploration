@@ -3,11 +3,15 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
-const AMOCoordinates: { x: number; y: number; z: number }[] = [
+const initialsCoordinates: { x: number; y: number; z: number }[] = [
   { x: -10, y: 0, z: 7 },
   { x: -10, y: 0, z: 6 },
   { x: -10, y: 0, z: 5 },
   { x: -10, y: 0, z: 4 },
+  { x: -10, y: 0, z: 3 },
+  { x: -10, y: 0, z: 2 },
+  { x: -9, y: 0, z: 1 },
+  { x: -9, y: 0, z: 0 },
 ];
 
 const gridCellWidth = 50;
@@ -156,7 +160,6 @@ export default function Home() {
       // calculate pointer position in normalized device coordinates
       const x = (event.clientX / window.innerWidth) * 2 - 1;
       const y = -(event.clientY / window.innerHeight) * 2 + 1;
-      console.log({ x, y });
       pointer.set(x, y);
 
       raycaster.setFromCamera(pointer, camera);
@@ -167,14 +170,12 @@ export default function Home() {
         const intersect = intersects[0];
         if (!intersect.face) return;
 
-        console.log({ intersect });
-
         // delete cube
         if (isShiftDown) {
           if (intersect.object !== plane) {
             scene.remove(intersect.object);
-
-            objects.splice(objects.indexOf(intersect.object), 1);
+            if (!intersect.object)
+              objects.splice(objects.indexOf(intersect.object), 1);
           }
 
           // create cube
@@ -217,16 +218,16 @@ export default function Home() {
 
     init();
 
-    const animatedCoordinates: (typeof AMOCoordinates)[number][] = [];
+    let animatedCoordinates: (typeof initialsCoordinates)[number][] = [];
 
     const animateName = () => {
       const addName = () => {
-        AMOCoordinates.forEach((coordinate, index) => {
+        initialsCoordinates.forEach((coordinate, index) => {
           const voxel = new THREE.Mesh(cubeGeo, cubeMaterial);
           voxel.position.set(
             coordinate.x * gridCellWidth,
             coordinate.y * gridCellWidth,
-            coordinate.z * gridCellWidth
+            (coordinate.z - 1) * gridCellWidth
           );
           voxel.position
             .divideScalar(gridCellWidth)
@@ -243,26 +244,20 @@ export default function Home() {
         });
       };
 
-      console.log({ animatedCoordinates });
-
       const removeName = () => {
         animatedCoordinates.forEach((coordinate, index) => {
           const voxel = objects.find((object) => {
             const position = new THREE.Vector3(
               coordinate.x * gridCellWidth,
               coordinate.y * gridCellWidth,
-              coordinate.z * gridCellWidth
+              (coordinate.z - 1) * gridCellWidth
             )
               .divideScalar(gridCellWidth)
               .ceil()
               .multiplyScalar(gridCellWidth)
               .addScalar(gridCellWidth / 2);
-
-            console.log({ position });
-
             return object.position.equals(position);
           });
-          console.log({ voxel });
           if (voxel) {
             setTimeout(() => {
               scene.remove(voxel);
@@ -271,26 +266,41 @@ export default function Home() {
             }, timeInterval * index);
           }
         });
+        animatedCoordinates = [];
       };
 
       addName();
 
       setTimeout(() => {
         removeName();
-      }, timeInterval * AMOCoordinates.length);
+      }, timeInterval * initialsCoordinates.length);
     };
 
     setTimeout(() => {
       animateName();
+      setInterval(() => {
+        animateName();
+      }, timeInterval * initialsCoordinates.length * 2);
     }, timeInterval);
 
     render();
-
-    console.log({ objects });
   }, []);
 
   return (
     <div className="w-screen h-screen">
+      <div id="info" className="absolute top-2 left-2">
+        My Initials AO, animated with boxes on a grid. Inspired by{" "}
+        <a
+          href="https://threejs.org/examples/webgl_interactive_voxelpainter.html"
+          target="_blank"
+          rel="noopener"
+        >
+          Three.js voxel painter
+        </a>
+        <br />
+        <strong>click</strong>: add voxel, <strong>shift + click</strong>:
+        remove voxel
+      </div>
       <canvas ref={canvasRef} className="w-full h-full" />
     </div>
   );
