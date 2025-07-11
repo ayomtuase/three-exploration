@@ -12,13 +12,21 @@ const initialsCoordinates: { x: number; y: number; z: number }[] = [
   { x: -10, y: 0, z: 2 },
   { x: -9, y: 0, z: 1 },
   { x: -9, y: 0, z: 0 },
+  { x: -8, y: 0, z: -1 },
+  { x: -8, y: 0, z: -2 },
+  { x: -7, y: 0, z: -2 },
+  { x: -6, y: 0, z: -2 },
+  { x: -5, y: 0, z: -1 },
+  { x: -4, y: 0, z: -0 },
+  { x: -4, y: 0, z: 1 },
+  { x: -3, y: 0, z: 2 },
 ];
 
 const gridCellWidth = 50;
 
 const planeWidth = 1000;
 
-const timeInterval = 500;
+const timeInterval = 200;
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
