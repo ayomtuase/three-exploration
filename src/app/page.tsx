@@ -9,7 +9,7 @@ const gridCellWidth = 50;
 
 const planeWidth = 1000;
 
-const timeInterval = 100;
+const timeInterval = 80;
 
 const fallHeight = 50;
 
@@ -43,13 +43,14 @@ const createCubeMaterial = () => {
 };
 
 const animateVoxelEntry = (voxel: THREE.Mesh) => {
+  const oldY = voxel.position.y;
   voxel.position.y += fallHeight;
   scene.add(voxel);
   objects[voxel.id] = voxel;
   render();
   const fallVoxel = () => {
-    if (voxel.position.y > gridCellWidth / 2) {
-      voxel.position.y -= 2;
+    if (voxel.position.y > oldY) {
+      voxel.position.y -= 1;
       render();
       requestAnimationFrame(fallVoxel);
     }
@@ -58,13 +59,14 @@ const animateVoxelEntry = (voxel: THREE.Mesh) => {
 };
 
 const animateVoxelExit = (voxel: THREE.Mesh) => {
+  const oldY = voxel.position.y;
   const raiseVoxel = () => {
-    if (voxel.position.y <= fallHeight + gridCellWidth / 2) {
+    if (voxel.position.y <= oldY + fallHeight) {
       voxel.position.y += 1;
       render();
       requestAnimationFrame(raiseVoxel);
     }
-    if (voxel.position.y >= fallHeight) {
+    if (voxel.position.y >= oldY + fallHeight) {
       scene.remove(voxel);
       delete objects[voxel.id];
       animatedVoxels = animatedVoxels.filter((id) => id !== voxel.id);
