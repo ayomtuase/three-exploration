@@ -9,7 +9,9 @@ const gridCellWidth = 50;
 
 const planeWidth = 1000;
 
-const timeInterval = 50;
+const timeInterval = 100;
+
+const fallHeight = 50;
 
 let camera: THREE.PerspectiveCamera;
 let scene: THREE.Scene;
@@ -17,7 +19,6 @@ let renderer: THREE.WebGLRenderer;
 let animatedVoxels: number[] = [];
 const objects: Record<number, THREE.Mesh> = {};
 let cubeGeo: THREE.BoxGeometry;
-let cubeMaterial: THREE.MeshLambertMaterial;
 let controls: OrbitControls;
 
 let animateTimeout: NodeJS.Timeout | undefined;
@@ -29,6 +30,49 @@ let currentVoxelIndex = 0;
 function render() {
   renderer.render(scene, camera);
 }
+
+const createCubeMaterial = () => {
+  const map = new THREE.TextureLoader().load(
+    "/textures/square-outline-textured.png"
+  );
+  map.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.MeshLambertMaterial({
+    color: Math.floor(Math.random() * 0xffffff),
+    map: map,
+  });
+};
+
+const animateVoxelEntry = (voxel: THREE.Mesh) => {
+  voxel.position.y += fallHeight;
+  scene.add(voxel);
+  objects[voxel.id] = voxel;
+  render();
+  const fallVoxel = () => {
+    if (voxel.position.y > gridCellWidth / 2) {
+      voxel.position.y -= 2;
+      render();
+      requestAnimationFrame(fallVoxel);
+    }
+  };
+  requestAnimationFrame(fallVoxel);
+};
+
+const animateVoxelExit = (voxel: THREE.Mesh) => {
+  const raiseVoxel = () => {
+    if (voxel.position.y <= fallHeight + gridCellWidth / 2) {
+      voxel.position.y += 1;
+      render();
+      requestAnimationFrame(raiseVoxel);
+    }
+    if (voxel.position.y >= fallHeight) {
+      scene.remove(voxel);
+      delete objects[voxel.id];
+      animatedVoxels = animatedVoxels.filter((id) => id !== voxel.id);
+      render();
+    }
+  };
+  requestAnimationFrame(raiseVoxel);
+};
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -72,18 +116,7 @@ export default function Home() {
       rollOverMesh = new THREE.Mesh(rollOverGeo, rollOverMaterial);
       scene.add(rollOverMesh);
 
-      // cubes
-
-      const map = new THREE.TextureLoader().load(
-        "/textures/square-outline-textured.png"
-      );
-      map.colorSpace = THREE.SRGBColorSpace;
       cubeGeo = new THREE.BoxGeometry(50, 50, 50);
-      cubeMaterial = new THREE.MeshLambertMaterial({
-        color: 0xfeb74c,
-        map: map,
-      });
-
       // grid
 
       const gridHelper = new THREE.GridHelper(
@@ -181,25 +214,19 @@ export default function Home() {
         // delete cube
         if (isShiftDown) {
           if (intersect.object !== plane) {
-            scene.remove(intersect.object);
-            delete objects[intersect.object.id];
-            animatedVoxels = animatedVoxels.filter(
-              (id) => id !== intersect.object.id
-            );
+            animateVoxelExit(intersect.object as THREE.Mesh);
           }
 
           // create cube
         } else {
-          const voxel = new THREE.Mesh(cubeGeo, cubeMaterial);
+          const voxel = new THREE.Mesh(cubeGeo, createCubeMaterial());
           voxel.position.copy(intersect.point).add(intersect.face.normal);
           voxel.position
             .divideScalar(gridCellWidth)
             .floor()
             .multiplyScalar(gridCellWidth)
             .addScalar(gridCellWidth / 2);
-          scene.add(voxel);
-
-          objects[voxel.id] = voxel;
+          animateVoxelEntry(voxel);
         }
 
         render();
@@ -209,7 +236,6 @@ export default function Home() {
     function animate() {
       requestAnimationFrame(animate);
 
-      // required if controls.enableDamping or controls.autoRotate are set to true
       controls.update();
 
       renderer.render(scene, camera);
@@ -248,7 +274,7 @@ export default function Home() {
         currentVoxelIndex > -1
       ) {
         const currentCoordinate = currentName[currentVoxelIndex];
-        const voxel = new THREE.Mesh(cubeGeo, cubeMaterial);
+        const voxel = new THREE.Mesh(cubeGeo, createCubeMaterial());
         voxel.position.set(
           currentCoordinate.x * gridCellWidth,
           currentCoordinate.y * gridCellWidth,
@@ -259,10 +285,9 @@ export default function Home() {
           .floor()
           .multiplyScalar(gridCellWidth)
           .addScalar(gridCellWidth / 2);
-        scene.add(voxel);
-        objects[voxel.id] = voxel;
+
+        animateVoxelEntry(voxel);
         animatedVoxels.push(voxel.id);
-        render();
 
         currentVoxelIndex++;
         animateTimeout = setTimeout(animateNames, timeInterval);
@@ -277,9 +302,7 @@ export default function Home() {
         if (voxelId) {
           const voxel = objects[voxelId];
           if (voxel) {
-            scene.remove(voxel);
-            delete objects[voxel.id];
-            render();
+            animateVoxelExit(voxel);
           }
         }
 
@@ -311,7 +334,6 @@ export default function Home() {
   }, [isAnimationStopped]);
 
   const handleAnimationToggle = () => {
-    // To stop animation
     if (!isAnimationStopped) {
       clearTimeout(animateTimeout);
     }
@@ -322,7 +344,7 @@ export default function Home() {
     <div className="w-screen h-screen">
       <div
         id="info"
-        className="absolute top-2 left-1/2 -translate-x-1/2 flex flex-col items-center"
+        className="fixed top-2 left-1/2 -translate-x-1/2 flex flex-col items-center font-medium w-full px-1"
       >
         <p className="text-center">
           My Initials: AO, my girlfriend{"'"}s initials JA, my mum{"'"}s
@@ -340,11 +362,11 @@ export default function Home() {
           </a>
         </p>
         <p className="">
-          <strong>click</strong>: add voxel, <strong>shift + click</strong>:
-          remove voxel
+          <strong>click</strong>: add box, <strong>shift + click</strong>:
+          remove box
         </p>
         <button
-          className="ml-2 bg-blue-600 text-white px-2 py-1 rounded cursor-pointer"
+          className="ml-2 bg-indigo-700 text-white px-2 py-1 rounded cursor-pointer"
           onClick={handleAnimationToggle}
         >
           {isAnimationStopped ? "Continue" : "Pause"}
