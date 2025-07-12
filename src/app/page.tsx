@@ -1,53 +1,52 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-
-const initialsCoordinates: { x: number; y: number; z: number }[] = [
-  { x: -10, y: 0, z: 7 },
-  { x: -10, y: 0, z: 6 },
-  { x: -10, y: 0, z: 5 },
-  { x: -10, y: 0, z: 4 },
-  { x: -10, y: 0, z: 3 },
-  { x: -10, y: 0, z: 2 },
-  { x: -9, y: 0, z: 1 },
-  { x: -9, y: 0, z: 0 },
-  { x: -8, y: 0, z: -1 },
-  { x: -8, y: 0, z: -2 },
-  { x: -7, y: 0, z: -2 },
-  { x: -6, y: 0, z: -2 },
-  { x: -5, y: 0, z: -1 },
-  { x: -4, y: 0, z: -0 },
-  { x: -4, y: 0, z: 1 },
-  { x: -3, y: 0, z: 2 },
-];
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { initialsCoordinates } from "./initials";
 
 const gridCellWidth = 50;
 
 const planeWidth = 1000;
 
-const timeInterval = 200;
+const timeInterval = 50;
+
+let camera: THREE.PerspectiveCamera;
+let scene: THREE.Scene;
+let renderer: THREE.WebGLRenderer;
+let animatedVoxels: number[] = [];
+const objects: Record<number, THREE.Mesh> = {};
+let cubeGeo: THREE.BoxGeometry;
+let cubeMaterial: THREE.MeshLambertMaterial;
+let controls: OrbitControls;
+
+let animateTimeout: NodeJS.Timeout | undefined;
+
+let direction: "forwards" | "backwards" = "forwards";
+let currentInitialsIndex = 0;
+let currentVoxelIndex = 0;
+
+function render() {
+  renderer.render(scene, camera);
+}
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [isAnimationStopped, setIsAnimationStopped] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || typeof window === undefined) return;
 
-    let camera: THREE.PerspectiveCamera;
-    let scene: THREE.Scene;
-    let renderer: THREE.WebGLRenderer;
     let pointer: THREE.Vector2;
     let raycaster: THREE.Raycaster;
     let isShiftDown = false;
 
     let rollOverMesh: THREE.Mesh;
     let rollOverMaterial: THREE.MeshBasicMaterial;
-    let cubeGeo: THREE.BoxGeometry;
-    let cubeMaterial: THREE.MeshLambertMaterial;
+
     let plane: THREE.Mesh;
-    const objects: THREE.Mesh[] = [];
 
     const init = () => {
       camera = new THREE.PerspectiveCamera(
@@ -103,9 +102,8 @@ export default function Home() {
         geometry,
         new THREE.MeshBasicMaterial({ visible: false })
       );
+      objects[plane.id] = plane;
       scene.add(plane);
-
-      objects.push(plane);
 
       // lights
 
@@ -119,14 +117,13 @@ export default function Home() {
       renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(window.innerWidth, window.innerHeight);
-      // document.body.appendChild(renderer.domElement);
+
+      controls = new OrbitControls(camera, renderer.domElement);
 
       document.addEventListener("pointermove", onPointerMove);
       document.addEventListener("pointerdown", onPointerDown);
       document.addEventListener("keydown", onDocumentKeyDown);
       document.addEventListener("keyup", onDocumentKeyUp);
-
-      //
 
       window.addEventListener("resize", onWindowResize);
     };
@@ -146,8 +143,9 @@ export default function Home() {
       pointer.set(x, y);
 
       raycaster.setFromCamera(pointer, camera);
+      const objectsArray = Object.values(objects);
 
-      const intersects = raycaster.intersectObjects(objects, false);
+      const intersects = raycaster.intersectObjects(objectsArray, false);
 
       if (intersects.length > 0) {
         const intersect = intersects[0];
@@ -172,7 +170,9 @@ export default function Home() {
 
       raycaster.setFromCamera(pointer, camera);
 
-      const intersects = raycaster.intersectObjects(objects, false);
+      const objectsArray = Object.values(objects);
+
+      const intersects = raycaster.intersectObjects(objectsArray, false);
 
       if (intersects.length > 0) {
         const intersect = intersects[0];
@@ -182,8 +182,10 @@ export default function Home() {
         if (isShiftDown) {
           if (intersect.object !== plane) {
             scene.remove(intersect.object);
-            if (!intersect.object)
-              objects.splice(objects.indexOf(intersect.object), 1);
+            delete objects[intersect.object.id];
+            animatedVoxels = animatedVoxels.filter(
+              (id) => id !== intersect.object.id
+            );
           }
 
           // create cube
@@ -197,117 +199,156 @@ export default function Home() {
             .addScalar(gridCellWidth / 2);
           scene.add(voxel);
 
-          objects.push(voxel);
+          objects[voxel.id] = voxel;
         }
 
         render();
       }
     }
 
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // required if controls.enableDamping or controls.autoRotate are set to true
+      controls.update();
+
+      renderer.render(scene, camera);
+    }
+
     function onDocumentKeyDown(event: KeyboardEvent) {
-      switch (event.keyCode) {
-        case 16:
+      switch (event.key) {
+        case "Shift":
           isShiftDown = true;
           break;
       }
     }
 
     function onDocumentKeyUp(event: KeyboardEvent) {
-      switch (event.keyCode) {
-        case 16:
+      switch (event.key) {
+        case "Shift":
           isShiftDown = false;
           break;
       }
     }
 
-    function render() {
-      renderer.render(scene, camera);
-    }
-
     init();
-
-    let animatedCoordinates: (typeof initialsCoordinates)[number][] = [];
-
-    const animateName = () => {
-      const addName = () => {
-        initialsCoordinates.forEach((coordinate, index) => {
-          const voxel = new THREE.Mesh(cubeGeo, cubeMaterial);
-          voxel.position.set(
-            coordinate.x * gridCellWidth,
-            coordinate.y * gridCellWidth,
-            (coordinate.z - 1) * gridCellWidth
-          );
-          voxel.position
-            .divideScalar(gridCellWidth)
-            .floor()
-            .multiplyScalar(gridCellWidth)
-            .addScalar(gridCellWidth / 2);
-          setTimeout(() => {
-            scene.add(voxel);
-            render();
-          }, timeInterval * index);
-
-          objects.push(voxel);
-          animatedCoordinates.unshift(coordinate);
-        });
-      };
-
-      const removeName = () => {
-        animatedCoordinates.forEach((coordinate, index) => {
-          const voxel = objects.find((object) => {
-            const position = new THREE.Vector3(
-              coordinate.x * gridCellWidth,
-              coordinate.y * gridCellWidth,
-              (coordinate.z - 1) * gridCellWidth
-            )
-              .divideScalar(gridCellWidth)
-              .ceil()
-              .multiplyScalar(gridCellWidth)
-              .addScalar(gridCellWidth / 2);
-            return object.position.equals(position);
-          });
-          if (voxel) {
-            setTimeout(() => {
-              scene.remove(voxel);
-              objects.splice(objects.indexOf(voxel), 1);
-              render();
-            }, timeInterval * index);
-          }
-        });
-        animatedCoordinates = [];
-      };
-
-      addName();
-
-      setTimeout(() => {
-        removeName();
-      }, timeInterval * initialsCoordinates.length);
-    };
-
-    setTimeout(() => {
-      animateName();
-      setInterval(() => {
-        animateName();
-      }, timeInterval * initialsCoordinates.length * 2);
-    }, timeInterval);
+    animate();
 
     render();
   }, []);
 
+  useEffect(() => {
+    if (isAnimationStopped) return;
+
+    function animateNames() {
+      const currentName = initialsCoordinates[currentInitialsIndex];
+      if (
+        direction === "forwards" &&
+        currentVoxelIndex < currentName.length &&
+        currentVoxelIndex > -1
+      ) {
+        const currentCoordinate = currentName[currentVoxelIndex];
+        const voxel = new THREE.Mesh(cubeGeo, cubeMaterial);
+        voxel.position.set(
+          currentCoordinate.x * gridCellWidth,
+          currentCoordinate.y * gridCellWidth,
+          (currentCoordinate.z - 1) * gridCellWidth
+        );
+        voxel.position
+          .divideScalar(gridCellWidth)
+          .floor()
+          .multiplyScalar(gridCellWidth)
+          .addScalar(gridCellWidth / 2);
+        scene.add(voxel);
+        objects[voxel.id] = voxel;
+        animatedVoxels.push(voxel.id);
+        render();
+
+        currentVoxelIndex++;
+        animateTimeout = setTimeout(animateNames, timeInterval);
+        return;
+      }
+      if (
+        direction === "backwards" &&
+        currentVoxelIndex > -1 &&
+        currentVoxelIndex < currentName.length
+      ) {
+        const voxelId = animatedVoxels.pop();
+        if (voxelId) {
+          const voxel = objects[voxelId];
+          if (voxel) {
+            scene.remove(voxel);
+            delete objects[voxel.id];
+            render();
+          }
+        }
+
+        currentVoxelIndex--;
+        animateTimeout = setTimeout(animateNames, timeInterval);
+        return;
+      }
+      if (currentVoxelIndex === currentName.length) {
+        direction = "backwards";
+        currentVoxelIndex--;
+        animateTimeout = setTimeout(animateNames, timeInterval);
+        return;
+      }
+      if (direction === "backwards" && currentVoxelIndex <= -1) {
+        direction = "forwards";
+        if (currentInitialsIndex === initialsCoordinates.length - 1) {
+          currentVoxelIndex = 0;
+          currentInitialsIndex = 0;
+        } else {
+          currentInitialsIndex += 1;
+          currentVoxelIndex = 0;
+        }
+        animateTimeout = setTimeout(animateNames, timeInterval);
+        return;
+      }
+    }
+
+    animateNames();
+  }, [isAnimationStopped]);
+
+  const handleAnimationToggle = () => {
+    // To stop animation
+    if (!isAnimationStopped) {
+      clearTimeout(animateTimeout);
+    }
+    setIsAnimationStopped((prev) => !prev);
+  };
+
   return (
     <div className="w-screen h-screen">
-      <div id="info" className="absolute top-2 left-2">
-        My Initials AO, animated with boxes on a grid. Inspired by{" "}
-        <a
-          href="https://threejs.org/examples/webgl_interactive_voxelpainter.html"
-          target="_blank"
-          rel="noopener"
+      <div
+        id="info"
+        className="absolute top-2 left-1/2 -translate-x-1/2 flex flex-col items-center"
+      >
+        <p className="text-center">
+          My Initials: AO, my girlfriend{"'"}s initials JA, my mum{"'"}s
+          initials: OO, animated with boxes on a grid.
+        </p>
+        <p className="text-center">
+          Derived from{" "}
+          <a
+            href="https://threejs.org/examples/webgl_interactive_voxelpainter.html"
+            target="_blank"
+            rel="noopener"
+            className="underline"
+          >
+            Three.js voxel painter
+          </a>
+        </p>
+        <p className="">
+          <strong>click</strong>: add voxel, <strong>shift + click</strong>:
+          remove voxel
+        </p>
+        <button
+          className="ml-2 bg-blue-600 text-white px-2 py-1 rounded cursor-pointer"
+          onClick={handleAnimationToggle}
         >
-          Three.js voxel painter
-        </a>
-        <br />
-        <strong>click</strong>: add voxel, <strong>shift + click</strong>:
-        remove voxel
+          {isAnimationStopped ? "Continue" : "Pause"}
+        </button>
       </div>
       <canvas ref={canvasRef} className="w-full h-full" />
     </div>

@@ -1,0 +1,116 @@
+const firstPosA = [
+  { x: -10, y: 0, z: 8 },
+  { x: -10, y: 0, z: 7 },
+  { x: -10, y: 0, z: 6 },
+  { x: -10, y: 0, z: 5 },
+  { x: -10, y: 0, z: 4 },
+  { x: -10, y: 0, z: 3 },
+  { x: -10, y: 0, z: 2 },
+  { x: -9, y: 0, z: 1 },
+  { x: -9, y: 0, z: 0 },
+  { x: -8, y: 0, z: -1 },
+  { x: -7, y: 0, z: -2 },
+  { x: -6, y: 0, z: -2 },
+  { x: -5, y: 0, z: -1 },
+  { x: -4, y: 0, z: -0 },
+  { x: -4, y: 0, z: 1 },
+  { x: -3, y: 0, z: 2 },
+  { x: -3, y: 0, z: 3 },
+  { x: -3, y: 0, z: 4 },
+  { x: -3, y: 0, z: 5 },
+  { x: -3, y: 0, z: 6 },
+  { x: -3, y: 0, z: 7 },
+  { x: -3, y: 0, z: 8 },
+  { x: -10, y: 0, z: 4 },
+  { x: -9, y: 0, z: 4 },
+  { x: -8, y: 0, z: 4 },
+  { x: -7, y: 0, z: 4 },
+  { x: -6, y: 0, z: 4 },
+  { x: -5, y: 0, z: 4 },
+  { x: -4, y: 0, z: 4 },
+  { x: -3, y: 0, z: 4 },
+];
+
+const secondPosO = [
+  // O
+  { x: 0, y: 0, z: 8 },
+  { x: 0, y: 0, z: 7 },
+  { x: 0, y: 0, z: 6 },
+  { x: 0, y: 0, z: 5 },
+  { x: 0, y: 0, z: 4 },
+  { x: 0, y: 0, z: 3 },
+  { x: 0, y: 0, z: 2 },
+  { x: 0, y: 0, z: 1 },
+  { x: 0, y: 0, z: 0 },
+  { x: 0, y: 0, z: -1 },
+  { x: 0, y: 0, z: -2 },
+  { x: 1, y: 0, z: -2 },
+  { x: 2, y: 0, z: -2 },
+  { x: 3, y: 0, z: -2 },
+  { x: 4, y: 0, z: -2 },
+  { x: 5, y: 0, z: -2 },
+  { x: 6, y: 0, z: -2 },
+  { x: 6, y: 0, z: -1 },
+  { x: 6, y: 0, z: 0 },
+  { x: 6, y: 0, z: 1 },
+  { x: 6, y: 0, z: 2 },
+  { x: 6, y: 0, z: 3 },
+  { x: 6, y: 0, z: 4 },
+  { x: 6, y: 0, z: 5 },
+  { x: 6, y: 0, z: 6 },
+  { x: 6, y: 0, z: 7 },
+  { x: 6, y: 0, z: 8 },
+  { x: 5, y: 0, z: 8 },
+  { x: 4, y: 0, z: 8 },
+  { x: 3, y: 0, z: 8 },
+  { x: 2, y: 0, z: 8 },
+  { x: 1, y: 0, z: 8 },
+  { x: 0, y: 0, z: 8 },
+];
+
+const firstPosJ = [
+  { x: -9, y: 0, z: 6 },
+  { x: -8, y: 0, z: 7 },
+  { x: -7, y: 0, z: 8 },
+  { x: -6, y: 0, z: 8 },
+  { x: -5, y: 0, z: 8 },
+  { x: -4, y: 0, z: 8 },
+  { x: -4, y: 0, z: 7 },
+  { x: -4, y: 0, z: 6 },
+  { x: -4, y: 0, z: 5 },
+  { x: -4, y: 0, z: 4 },
+  { x: -4, y: 0, z: 3 },
+  { x: -4, y: 0, z: 2 },
+  { x: -4, y: 0, z: 1 },
+  { x: -4, y: 0, z: 0 },
+  { x: -4, y: 0, z: -1 },
+  { x: -7, y: 0, z: -2 },
+  { x: -6, y: 0, z: -2 },
+  { x: -5, y: 0, z: -2 },
+  { x: -4, y: 0, z: -2 },
+  { x: -3, y: 0, z: -2 },
+  { x: -2, y: 0, z: -2 },
+  { x: -1, y: 0, z: -2 },
+];
+
+const AOInitials = [
+  // A
+  ...firstPosA.map((pos) => ({ ...pos, x: pos.x + 1, z: pos.z - 2 })),
+  // O
+  ...secondPosO.map((pos) => ({ ...pos, x: pos.x + 1, z: pos.z - 2 })),
+];
+
+const JAInitials = [
+  ...firstPosJ.map((pos) => ({ ...pos, z: pos.z - 2 })),
+  ...firstPosA.map((pos) => ({ ...pos, x: pos.x + 10, z: pos.z - 2 })),
+];
+const OOInitials = [
+  ...secondPosO.map((pos) => ({ ...pos, x: pos.x - 8, z: pos.z - 2 })),
+  ...secondPosO.map((pos) => ({ ...pos, x: pos.x + 1, z: pos.z - 2 })),
+];
+
+export const initialsCoordinates: { x: number; y: number; z: number }[][] = [
+  AOInitials,
+  JAInitials,
+  OOInitials,
+];
