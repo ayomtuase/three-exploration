@@ -11,7 +11,7 @@ const planeWidth = 1000;
 
 const timeInterval = 80;
 
-const fallHeight = 50;
+const fallHeight = 30;
 
 let camera: THREE.PerspectiveCamera;
 let scene: THREE.Scene;
@@ -50,7 +50,7 @@ const animateVoxelEntry = (voxel: THREE.Mesh) => {
   render();
   const fallVoxel = () => {
     if (voxel.position.y > oldY) {
-      voxel.position.y -= 1;
+      voxel.position.y -= 2;
       render();
       requestAnimationFrame(fallVoxel);
     }
@@ -61,12 +61,11 @@ const animateVoxelEntry = (voxel: THREE.Mesh) => {
 const animateVoxelExit = (voxel: THREE.Mesh) => {
   const oldY = voxel.position.y;
   const raiseVoxel = () => {
-    if (voxel.position.y <= oldY + fallHeight) {
-      voxel.position.y += 1;
+    if (voxel.position.y < oldY + fallHeight) {
+      voxel.position.y += 2;
       render();
       requestAnimationFrame(raiseVoxel);
-    }
-    if (voxel.position.y >= oldY + fallHeight) {
+    } else {
       scene.remove(voxel);
       delete objects[voxel.id];
       animatedVoxels = animatedVoxels.filter((id) => id !== voxel.id);
