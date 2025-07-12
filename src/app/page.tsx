@@ -351,7 +351,7 @@ export default function Home() {
           initials: OO, animated with boxes on a grid.
         </p>
         <p className="text-center">
-          Derived from{" "}
+          Customized{" "}
           <a
             href="https://threejs.org/examples/webgl_interactive_voxelpainter.html"
             target="_blank"
